@@ -1,11 +1,10 @@
 'use client';
-import Map from '~/components/map';
 
-// CORRECTED PATH: Now using '../' because this page is located directly inside the 'app' directory.
+import dynamic from 'next/dynamic';
 import IncidentsPanel from '../components/incidents-panel/incidentsPanel'; 
 
-// Renaming the imported component for clarity, as its default export is 'App'
 const IncidentTracker = IncidentsPanel; 
+const Map = dynamic(() => import('../components/map'), { ssr: false });
 
 export default function DispatcherDashboardPage() {
   return (

@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
-import type { Incident, IncidentStatus, UnitType } from '../mockData/types';
-import { MOCK_INCIDENTS } from '../mockData/incidents';
+import type { Incident, IncidentStatus, UnitType } from '~/mockData/types';
+import { MOCK_INCIDENTS } from '~/mockData/incidents';
 import { IncidentCard } from './incidentCard';
 import { AssignmentModal } from './modals/assignmentModal';
 import { ConfirmationModal } from './modals/confirmModal';

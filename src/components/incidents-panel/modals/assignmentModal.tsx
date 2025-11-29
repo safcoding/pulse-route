@@ -1,6 +1,6 @@
-import { useState } from 'react';
-import type { Incident, UnitType } from '~/components/mockData/types';
-import { MOCK_HOSPITALS, MOCK_AVAILABLE_UNITS } from '~/components/mockData/incidents';
+import { useState, useEffect } from 'react';
+import type { Incident, UnitType } from '~/mockData/types';
+import { getHospitals, getAmbulances } from '~/services/api';
 
 interface AssignmentModalProps {
     incident: Incident | null;
@@ -8,11 +8,63 @@ interface AssignmentModalProps {
     onClose: () => void;
 }
 
+// Define the actual API response types
+interface HospitalFromAPI {
+    id: number;
+    name: string;
+    location: {
+        lat: number;
+        lng: number;
+    };
+    capabilities: string[];
+    ambulanceCount: number;
+    createdAt: string;
+    updatedAt: string;
+}
+
+interface AmbulanceFromAPI {
+    id: number;
+    callsign: string;
+    type: string;
+    status: string;
+    hospitalId: number;
+    location: {
+        lat: number;
+        lng: number;
+    };
+}
+
 export function AssignmentModal({ incident, onAssign, onClose }: AssignmentModalProps) {
     const [step, setStep] = useState(1);
     const [selectedHospital, setSelectedHospital] = useState<number | null>(null);
     const [selectedUnit, setSelectedUnit] = useState<string>('');
     const [notes, setNotes] = useState('');
+    const [hospitals, setHospitals] = useState<HospitalFromAPI[]>([]);
+    const [ambulances, setAmbulances] = useState<AmbulanceFromAPI[]>([]);
+    const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        if (incident) {
+            async function fetchData() {
+                setLoading(true);
+                try {
+                    const [hospitalsData, ambulancesData] = await Promise.all([
+                        getHospitals(),
+                        getAmbulances()
+                    ]);
+                    console.log('Hospitals:', hospitalsData);
+                    console.log('Ambulances:', ambulancesData);
+                    setHospitals(hospitalsData);
+                    setAmbulances(ambulancesData);
+                } catch (err) {
+                    console.error('Failed to fetch data:', err);
+                } finally {
+                    setLoading(false);
+                }
+            }
+            fetchData();
+        }
+    }, [incident]);
 
     if (!incident) return null;
 
@@ -24,8 +76,8 @@ export function AssignmentModal({ incident, onAssign, onClose }: AssignmentModal
 
     const handleFinalAssign = () => {
         if (selectedUnit) {
-            const unitDetail = MOCK_AVAILABLE_UNITS.find(u => u.callsign === selectedUnit);
-            onAssign(incident.id, selectedUnit, unitDetail?.type ?? 'BLS', notes);
+            const ambulance = ambulances.find(a => a.callsign === selectedUnit);
+            onAssign(incident.id, selectedUnit, (ambulance?.type as UnitType) ?? 'BLS', notes);
             // Reset
             setStep(1);
             setSelectedHospital(null);
@@ -35,36 +87,56 @@ export function AssignmentModal({ incident, onAssign, onClose }: AssignmentModal
         }
     };
 
+    // Calculate distance (you can implement a proper distance calculation later)
+    const calculateDistance = (hospital: HospitalFromAPI) => {
+        // Placeholder - replace with actual distance calculation if you have incident location
+        return `${(Math.random() * 5 + 1).toFixed(1)} km`;
+    };
+
+    // Filter ambulances for selected hospital
+    const availableAmbulances = ambulances.filter(
+        a => a.hospitalId === selectedHospital && a.status === 'available'
+    );
+
     const renderStep1 = () => (
         <>
             <h3 className="text-2xl font-bold text-gray-900 mb-2">Select Hospital</h3>
             <p className="text-gray-600 mb-4">Incident #{incident.id} - {incident.type}</p>
 
-            <div className="space-y-3 mb-6">
-                {MOCK_HOSPITALS.map((hospital) => (
-                    <div
-                        key={hospital.id}
-                        onClick={() => setSelectedHospital(hospital.id)}
-                        className={`cursor-pointer border rounded-lg p-4 transition ${
-                            selectedHospital === hospital.id
-                                ? 'border-blue-500 bg-blue-50'
-                                : 'border-gray-200 hover:border-blue-300'
-                        }`}
-                    >
-                        <div className="flex justify-between items-start mb-2">
-                            <h4 className="font-bold text-gray-900">{hospital.name}</h4>
-                            <span className="text-sm text-gray-500">{hospital.distance}</span>
-                        </div>
-                        <div className="text-sm text-gray-600">
-                            {hospital.availableUnits.map((unit, idx) => (
-                                <div key={idx}>
-                                    <span className="font-semibold">{unit.type}:</span> {unit.count} units ({unit.description})
+            {loading ? (
+                <div className="text-center py-8 text-gray-500">Loading hospitals...</div>
+            ) : (
+                <div className="space-y-3 mb-6 max-h-96 overflow-y-auto">
+                    {hospitals.map((hospital) => (
+                        <div
+                            key={hospital.id}
+                            onClick={() => setSelectedHospital(hospital.id)}
+                            className={`cursor-pointer border rounded-lg p-4 transition ${
+                                selectedHospital === hospital.id
+                                    ? 'border-blue-500 bg-blue-50'
+                                    : 'border-gray-200 hover:border-blue-300'
+                            }`}
+                        >
+                            <div className="flex justify-between items-start mb-2">
+                                <h4 className="font-bold text-gray-900">{hospital.name}</h4>
+                                <span className="text-sm text-gray-500">{calculateDistance(hospital)}</span>
+                            </div>
+                            <div className="text-sm text-gray-600">
+                                <div className="mb-1">
+                                    <span className="font-semibold">Ambulances:</span> {hospital.ambulanceCount} available
                                 </div>
-                            ))}
+                                <div className="flex flex-wrap gap-1">
+                                    {hospital.capabilities.map((cap, idx) => (
+                                        <span key={idx} className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">
+                                            {cap}
+                                        </span>
+                                    ))}
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                ))}
-            </div>
+                    ))}
+                </div>
+            )}
 
             <div className="flex justify-end space-x-3">
                 <button onClick={onClose} className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-medium transition">
@@ -92,35 +164,43 @@ export function AssignmentModal({ incident, onAssign, onClose }: AssignmentModal
 
             <h3 className="text-2xl font-bold text-gray-900 mb-2">Assign Unit</h3>
             <p className="text-gray-600 mb-4">
-                Hospital: {MOCK_HOSPITALS.find(h => h.id === selectedHospital)?.name}
+                Hospital: {hospitals.find(h => h.id === selectedHospital)?.name}
             </p>
 
             <div className="mb-4">
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Available Units</label>
-                <div className="space-y-2">
-                    {MOCK_AVAILABLE_UNITS.map((unit) => (
-                        <div
-                            key={unit.callsign}
-                            onClick={() => setSelectedUnit(unit.callsign)}
-                            className={`cursor-pointer border rounded-lg p-3 transition ${
-                                selectedUnit === unit.callsign
-                                    ? 'border-blue-500 bg-blue-50'
-                                    : 'border-gray-200 hover:border-blue-300'
-                            }`}
-                        >
-                            <div className="flex justify-between items-center">
-                                <div>
-                                    <span className="font-bold text-gray-900">{unit.callsign}</span>
-                                    <span className="ml-2 text-xs bg-gray-200 px-2 py-0.5 rounded">{unit.type}</span>
-                                </div>
-                                <div className="text-right text-sm text-gray-600">
-                                    <div>{unit.distanceKm} km away</div>
-                                    <div className="text-green-600 font-semibold">ETA: {unit.etaMinutes} min</div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Available Ambulances</label>
+                {availableAmbulances.length === 0 ? (
+                    <div className="text-center py-4 text-gray-500 border border-gray-200 rounded-lg">
+                        No ambulances available at this hospital
+                    </div>
+                ) : (
+                    <div className="space-y-2 max-h-64 overflow-y-auto">
+                        {availableAmbulances.map((ambulance) => (
+                            <div
+                                key={ambulance.id}
+                                onClick={() => setSelectedUnit(ambulance.callsign)}
+                                className={`cursor-pointer border rounded-lg p-3 transition ${
+                                    selectedUnit === ambulance.callsign
+                                        ? 'border-blue-500 bg-blue-50'
+                                        : 'border-gray-200 hover:border-blue-300'
+                                }`}
+                            >
+                                <div className="flex justify-between items-center">
+                                    <div>
+                                        <span className="font-bold text-gray-900">{ambulance.callsign}</span>
+                                        <span className="ml-2 text-xs bg-gray-200 px-2 py-0.5 rounded">{ambulance.type}</span>
+                                        <span className="ml-2 text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">
+                                            {ambulance.status}
+                                        </span>
+                                    </div>
+                                    <div className="text-right text-sm text-gray-600">
+                                        <div className="text-green-600 font-semibold">Ready to dispatch</div>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    ))}
-                </div>
+                        ))}
+                    </div>
+                )}
             </div>
 
             <div className="mb-4">
