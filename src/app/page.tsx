@@ -1,10 +1,10 @@
 'use client';
 
-// CORRECTED PATH: Now using '../' because this page is located directly inside the 'app' directory.
-import IncidentsPanel from '../components/ui/incidentsPanel'; 
+import dynamic from 'next/dynamic';
+import IncidentsPanel from '../components/incidents-panel/incidentsPanel'; 
 
-// Renaming the imported component for clarity, as its default export is 'App'
 const IncidentTracker = IncidentsPanel; 
+const Map = dynamic(() => import('../components/map'), { ssr: false });
 
 export default function DispatcherDashboardPage() {
   return (
@@ -20,7 +20,7 @@ export default function DispatcherDashboardPage() {
       <div className="flex-1 p-6 flex flex-col">
         <h1 className="text-3xl font-bold text-gray-800 mb-6">Optimal Route Map</h1>
         <div className="flex-1 bg-white rounded-xl shadow-lg border border-gray-100 flex items-center justify-center text-gray-400 text-lg">
-          [Map Component & Routing Logic Goes Here]
+          <Map />
         </div>
         
         {/* You will eventually add the Active Responders panel here */}
