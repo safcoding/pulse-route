@@ -6,17 +6,17 @@ import L from "leaflet";
 
 // --- Icons Configuration ---
 const driverIcon = L.icon({
-  iconUrl: "/marker.png", // Your custom image (ensure this exists in /public)
-  iconSize: [40, 40],
-  iconAnchor: [20, 20],
+  iconUrl: "/ambulance.png",
+  iconSize: [45, 45],
+  iconAnchor: [5, 5],
   popupAnchor: [0, -20],
 });
 
 // Standard Leaflet markers for Start/End (or use your own images)
 const locationIcon = L.icon({
-  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
+  iconUrl: "/incident.png",
+  iconSize: [30, 30],
+  iconAnchor: [5, 5],
   popupAnchor: [1, -34],
 });
 
