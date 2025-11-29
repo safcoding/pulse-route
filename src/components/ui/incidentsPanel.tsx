@@ -176,7 +176,7 @@ const ConfirmationModal: React.FC<{
 
   return (
     // Modal Overlay
-    <div className="fixed inset-0 bg-gray-900 bg-opacity-75 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 bg-gray-900 bg-opacity-75 z-[9999] flex items-center justify-center p-4">
       {/* Modal Content */}
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6 transform transition-all">
         <h3 className="text-xl font-bold text-red-600 mb-3">Confirm Cancellation</h3>
@@ -449,7 +449,7 @@ const AssignmentModal: React.FC<{
     };
 
     return (
-        <div className="fixed inset-0 bg-gray-900 bg-opacity-75 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-gray-900 bg-opacity-75 z-[9999] flex items-center justify-center p-4">
             <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg p-8 transform transition-all">
                 {step === 1 && renderStep1()}
                 {step === 2 && renderStep2()}
