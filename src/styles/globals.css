@@ -123,3 +123,62 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* =============================================================================
+   MAP ICON STYLES - Custom Leaflet marker styling
+   ============================================================================= */
+
+/* Remove default Leaflet marker styling */
+.incident-marker,
+.responder-marker,
+.facility-marker {
+  background: transparent !important;
+  border: none !important;
+}
+
+/* Add subtle shadow to all map markers */
+.incident-marker svg,
+.responder-marker svg,
+.facility-marker svg {
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+}
+
+/* Hover effects for interactive markers */
+.responder-marker:hover svg,
+.facility-marker:hover svg {
+  transform: scale(1.1);
+  transition: transform 0.2s ease;
+}
+
+/* Pulse animation keyframes for active incidents */
+@keyframes pulse-ring {
+  0% {
+    transform: scale(1);
+    opacity: 0.6;
+  }
+  50% {
+    transform: scale(1.3);
+    opacity: 0.2;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 0.6;
+  }
+}
+
+/* Critical incident marker glow effect */
+.incident-marker.critical svg {
+  filter: drop-shadow(0 0 8px rgba(220, 38, 38, 0.5));
+}
+
+/* Responder marker trail effect when moving */
+.responder-marker.en-route::after {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: inherit;
+  opacity: 0.3;
+  animation: pulse-ring 1.5s ease-out infinite;
+}

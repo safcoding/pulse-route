@@ -217,7 +217,7 @@ const AssignmentModal: React.FC<{
     // Step state: 1 (Select Type/Hospital), 2 (Select Specific Unit)
     const [step, setStep] = useState(1);
 
-    const defaultHospitalId = MOCK_HOSPITALS.length > 0 ? MOCK_HOSPITALS[0].id : 0;
+    const defaultHospitalId = MOCK_HOSPITALS.length > 0 ? MOCK_HOSPITALS[0]!.id : 0;
     
     // Form state storage
     const [selectedHospitalId, setSelectedHospitalId] = useState<number>(defaultHospitalId);
@@ -229,7 +229,7 @@ const AssignmentModal: React.FC<{
     if (MOCK_HOSPITALS.length === 0) return null;
     if (!incident) return null;
 
-    const selectedHospital = MOCK_HOSPITALS.find(h => h.id === selectedHospitalId) || MOCK_HOSPITALS[0];
+    const selectedHospital = MOCK_HOSPITALS.find(h => h.id === selectedHospitalId) ?? MOCK_HOSPITALS[0]!;
     const unitOptions = selectedHospital.availableUnits;
     
     // --- Handlers ---
