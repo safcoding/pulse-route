@@ -2,7 +2,7 @@
 import Map from '~/components/map';
 
 // CORRECTED PATH: Now using '../' because this page is located directly inside the 'app' directory.
-import IncidentsPanel from '../components/ui/incidentsPanel'; 
+import IncidentsPanel from '../components/incidents-panel/incidentsPanel'; 
 
 // Renaming the imported component for clarity, as its default export is 'App'
 const IncidentTracker = IncidentsPanel; 
