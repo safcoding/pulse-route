@@ -1,0 +1,93 @@
+'use client'
+import { useState, useEffect } from "react";
+import { MapContainer, TileLayer, Popup, Marker, Polyline } from "react-leaflet";
+import "leaflet/dist/leaflet.css";
+import L from "leaflet";
+
+// --- Icons Configuration ---
+const driverIcon = L.icon({
+  iconUrl: "/marker.png", // Your custom image (ensure this exists in /public)
+  iconSize: [40, 40],
+  iconAnchor: [20, 20],
+  popupAnchor: [0, -20],
+});
+
+// Standard Leaflet markers for Start/End (or use your own images)
+const locationIcon = L.icon({
+  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+});
+
+// --- Simulation Data ---
+// 1. Restaurant Location
+const restaurantPos: [number, number] = [3.0552, 101.5850];
+
+// 2. User Location
+const userPos: [number, number] = [3.0580, 101.5900];
+
+// 3. The Route (A list of coordinates connecting them)
+// In a real app, you would get this from a Routing API (like OSRM or Mapbox)
+const routePath: [number, number][] = [
+  [3.0552, 101.5850], // Start
+  [3.0555, 101.5855],
+  [3.0560, 101.5860],
+  [3.0565, 101.5870],
+  [3.0570, 101.5880],
+  [3.0575, 101.5890],
+  [3.0580, 101.5900]  // End
+];
+
+export default function Map() { 
+  const [currentStep, setCurrentStep] = useState(0);
+
+  // Animation Logic
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentStep((prev) => {
+        // If we reached the end, restart (or stop)
+        if (prev >= routePath.length - 1) return 0; 
+        return prev + 1;
+      });
+    }, 1000); // Move every 1 second
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // Calculate current position based on step
+  const driverPosition = routePath[currentStep];
+
+  return(
+    <MapContainer 
+      center={[3.0565, 101.5875]} // Center between the two points
+      zoom={16} 
+      scrollWheelZoom={false}   
+      style={{ height: "500px", width: "100%" }}
+    >
+      <TileLayer
+        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+      />
+
+      {/* 1. The Route Line */}
+      <Polyline positions={routePath} color="blue" weight={5} opacity={0.6} />
+
+      {/* 2. Restaurant Marker */}
+      <Marker position={restaurantPos} icon={locationIcon}>
+        <Popup>Restaurant: Burger King</Popup>
+      </Marker>
+
+      {/* 3. User Marker */}
+      <Marker position={userPos} icon={locationIcon}>
+        <Popup>Customer: John Doe</Popup>
+      </Marker>
+
+      {/* 4. The Moving Driver */}
+      <Marker position={driverPosition} icon={driverIcon}>
+        <Popup>Driver is here!</Popup>
+      </Marker>
+
+    </MapContainer>
+  );
+}

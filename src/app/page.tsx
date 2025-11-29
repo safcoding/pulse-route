@@ -1,12 +1,14 @@
 'use client';
 
-import { Hero
+import {Hero} from "~/components/hero";
+import Map from "~/components/map";
 
- } from "~/components/hero";
 export default function HomePage() {
+
   return (
     <main>
         <Hero />
+        <Map />
     </main>
   );
 }
