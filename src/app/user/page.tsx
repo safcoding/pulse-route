@@ -1,6 +1,7 @@
 'use client';
 
 import dynamic from 'next/dynamic';
+import { SimulationControlPanel } from '~/components/SimulationControlPanel';
 
 const UserIncidentMap = dynamic(() => import('~/components/user-incident-map'), { 
   ssr: false,
@@ -22,6 +23,9 @@ export default function UserIncidentPage() {
       <div className="flex-1">
         <UserIncidentMap />
       </div>
+
+      {/* Simulation Control Panel (God Mode) */}
+      <SimulationControlPanel />
     </div>
   );
 }

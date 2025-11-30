@@ -50,7 +50,9 @@ function transformIncidentForUI(incident: Incident): UIIncident {
     time: incident.createdAt
       ? new Date(incident.createdAt).toLocaleString()
       : 'Unknown',
-    location: `${incident.location.lat.toFixed(4)}, ${incident.location.lng.toFixed(4)}`,
+    location: incident.location
+      ? `${incident.location.lat.toFixed(4)}, ${incident.location.lng.toFixed(4)}`
+      : 'Unknown location',
     caller: 'Dispatcher',
     responder: incident.assignedAmbulanceId
       ? `Ambulance #${incident.assignedAmbulanceId}`
@@ -61,9 +63,7 @@ function transformIncidentForUI(incident: Incident): UIIncident {
 }
 
 export default function IncidentsPanel() {
-  const { data: incidents = [], isLoading, error } = useIncidents({
-    refetchInterval: 10000, // Refetch every 10 seconds for real-time updates
-  });
+  const { data: incidents = [], isLoading, error } = useIncidents();
   const updateIncidentStatus = useUpdateIncidentStatus();
 
   const [activeTab, setActiveTab] = useState<string>('All');
@@ -147,8 +147,8 @@ export default function IncidentsPanel() {
               key={tab}
               onClick={() => setActiveTab(tab)}
               className={`flex-1 py-2 px-4 text-sm font-semibold rounded transition ${activeTab === tab
-                  ? 'bg-blue-600 text-white'
-                  : 'text-gray-600 hover:bg-gray-100'
+                ? 'bg-blue-600 text-white'
+                : 'text-gray-600 hover:bg-gray-100'
                 }`}
             >
               {tab}

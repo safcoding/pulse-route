@@ -15,7 +15,7 @@ import type {
  * Optional query param: status (e.g., 'PENDING')
  */
 export async function getIncidents(status?: string): Promise<Incident[]> {
-  const params = status ? { status } : undefined;
+  const params = status ? { status } : {};
   const response = await apiGet<ApiResponse<Incident[]>>('/incidents', { params });
   return response.data;
 }

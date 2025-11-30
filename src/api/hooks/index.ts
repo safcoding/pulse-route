@@ -6,3 +6,5 @@ export * from './useDispatch';
 export * from './useHazards';
 export * from './useRouting';
 export * from './useSimulation';
+export * from './useSocket';
+export * from './useAmbulanceMovement';
