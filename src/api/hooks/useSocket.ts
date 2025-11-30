@@ -74,6 +74,11 @@ export function useDispatchSocket() {
       // Store route and ETA data if present
       if (data.route || data.etaSeconds !== undefined) {
         if (data.route) {
+          console.log('📍 Storing route for ambulance', ambulanceId, {
+            coordinatesCount: data.route.coordinates?.length,
+            eta: data.etaSeconds,
+            phase: data.phase
+          });
           ambulanceRoutesStore.set(ambulanceId, {
             route: data.route,
             etaSeconds: data.etaSeconds ?? 0,
@@ -81,6 +86,8 @@ export function useDispatchSocket() {
           });
           notifyRouteUpdate();
         }
+      } else {
+        console.log('⚠️ AMBULANCE_UPDATE received without route data for ambulance', ambulanceId, data);
       }
 
       // Update specific ambulance in cache

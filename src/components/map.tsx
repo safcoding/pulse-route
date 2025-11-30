@@ -58,6 +58,17 @@ export default function Map() {
   // Track which ambulance popup is open to highlight its route
   const [focusedAmbulanceId, setFocusedAmbulanceId] = useState<number | null>(null);
 
+  // Debug: Log available routes
+  if (ambulanceRoutes.size > 0) {
+    console.log('Available ambulance routes:', Array.from(ambulanceRoutes.entries()).map(([id, data]) => ({
+      ambulanceId: id,
+      hasRoute: !!data.route,
+      coordinatesCount: data.route?.coordinates?.length ?? 0,
+      eta: data.etaSeconds,
+      phase: data.phase
+    })));
+  }
+
   // Calculate center of map based on incidents or default to Kuala Lumpur
   const mapCenter: [number, number] = useMemo(() => {
     if (incidents.length > 0) {
@@ -203,17 +214,14 @@ export default function Map() {
         );
       })}
 
-      {/* Ambulance Routes (Polylines) - Only show for focused ambulance or all if none focused */}
+      {/* Ambulance Routes (Polylines) - Show all routes, highlight focused one */}
       {Array.from(ambulanceRoutes.entries()).map(([ambulanceId, routeData]) => {
         if (!routeData.route || !routeData.route.coordinates || routeData.route.coordinates.length === 0) {
           return null;
         }
 
-        // Only show route if this ambulance is focused (popup open)
+        // Check if this ambulance is focused (popup open)
         const isFocused = focusedAmbulanceId === ambulanceId;
-        const shouldShow = isFocused || focusedAmbulanceId === null;
-        
-        if (!shouldShow) return null;
 
         // Convert GeoJSON coordinates [lng, lat] to Leaflet format [lat, lng]
         const positions: [number, number][] = routeData.route.coordinates.map(
@@ -232,7 +240,7 @@ export default function Map() {
             pathOptions={{
               color: baseColor,
               weight: isFocused ? 6 : 4,
-              opacity: isFocused ? 0.95 : 0.5,
+              opacity: isFocused ? 0.95 : 0.6,
               dashArray: isFocused ? undefined : '10, 10',
             }}
           />
