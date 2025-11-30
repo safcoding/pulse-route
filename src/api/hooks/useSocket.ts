@@ -27,8 +27,17 @@ export function useDispatchSocket() {
   const maxReconnectAttempts = 10;
 
   const handleAmbulanceUpdate = useCallback(
-    (data: AmbulanceUpdateEvent) => {
+    (data: AmbulanceUpdateEvent | undefined) => {
+      if (!data) {
+        console.warn('Received AMBULANCE_UPDATE with no data');
+        return;
+      }
+
       const ambulanceId = data.ambulanceId ?? data.id;
+      if (!ambulanceId) {
+        console.warn('AMBULANCE_UPDATE missing ambulanceId:', data);
+        return;
+      }
 
       // Update specific ambulance in cache
       queryClient.setQueryData<Ambulance>(
@@ -64,7 +73,11 @@ export function useDispatchSocket() {
   );
 
   const handleIncidentAdded = useCallback(
-    (_data: IncidentAddedEvent) => {
+    (data: IncidentAddedEvent | undefined) => {
+      if (!data) {
+        console.warn('Received INCIDENT_ADDED with no data');
+        return;
+      }
       // Invalidate incident lists to refetch with new incident
       void queryClient.invalidateQueries({ queryKey: incidentKeys.lists() });
     },
@@ -72,7 +85,12 @@ export function useDispatchSocket() {
   );
 
   const handleIncidentUpdate = useCallback(
-    (data: IncidentUpdateEvent) => {
+    (data: IncidentUpdateEvent | undefined) => {
+      if (!data || !data.incidentId) {
+        console.warn('Received INCIDENT_UPDATE with invalid data:', data);
+        return;
+      }
+
       const incidentId = data.incidentId;
 
       // Update specific incident in cache
@@ -111,7 +129,12 @@ export function useDispatchSocket() {
   );
 
   const handleIncidentDeleted = useCallback(
-    (data: IncidentDeletedEvent) => {
+    (data: IncidentDeletedEvent | undefined) => {
+      if (!data || !data.incidentId) {
+        console.warn('Received INCIDENT_DELETED with invalid data:', data);
+        return;
+      }
+
       // Remove incident from cache
       queryClient.removeQueries({ queryKey: incidentKeys.detail(data.incidentId) });
 
@@ -132,18 +155,23 @@ export function useDispatchSocket() {
       try {
         const message = JSON.parse(event.data as string) as WebSocketMessage;
 
+        if (!message || !message.type) {
+          console.warn('Invalid WebSocket message format:', message);
+          return;
+        }
+
         switch (message.type) {
           case 'AMBULANCE_UPDATE':
-            handleAmbulanceUpdate(message.data as AmbulanceUpdateEvent);
+            handleAmbulanceUpdate(message.data as AmbulanceUpdateEvent | undefined);
             break;
           case 'INCIDENT_ADDED':
-            handleIncidentAdded(message.data as IncidentAddedEvent);
+            handleIncidentAdded(message.data as IncidentAddedEvent | undefined);
             break;
           case 'INCIDENT_UPDATE':
-            handleIncidentUpdate(message.data as IncidentUpdateEvent);
+            handleIncidentUpdate(message.data as IncidentUpdateEvent | undefined);
             break;
           case 'INCIDENT_DELETED':
-            handleIncidentDeleted(message.data as IncidentDeletedEvent);
+            handleIncidentDeleted(message.data as IncidentDeletedEvent | undefined);
             break;
           case 'HOSPITAL_SELECTED':
           case 'SIMULATION_COMPLETE':

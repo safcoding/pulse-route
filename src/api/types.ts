@@ -91,7 +91,10 @@ export type IncidentCategory = 'MEDICAL' | 'FIRE' | 'ACCIDENT' | 'OTHER';
 
 export interface Incident {
   id: string;
-  location: Location;
+  // Backend returns lat/lng separately, not in a location object
+  lat?: number;
+  lng?: number;
+  location?: Location; // For backwards compatibility
   triage: TriageType;
   status: IncidentStatus;
   category?: IncidentCategory;

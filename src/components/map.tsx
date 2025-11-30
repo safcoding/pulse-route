@@ -55,9 +55,15 @@ export default function Map() {
   // Calculate center of map based on incidents or default to Kuala Lumpur
   const mapCenter: [number, number] = useMemo(() => {
     if (incidents.length > 0) {
-      const firstIncident = incidents.find(inc => inc.location);
-      if (firstIncident?.location) {
-        return [firstIncident.location.lat, firstIncident.location.lng];
+      const firstIncident = incidents.find(inc =>
+        (inc.location?.lat && inc.location?.lng) || (inc.lat && inc.lng)
+      );
+      if (firstIncident) {
+        const lat = firstIncident.location?.lat ?? firstIncident.lat;
+        const lng = firstIncident.location?.lng ?? firstIncident.lng;
+        if (lat !== undefined && lng !== undefined) {
+          return [lat, lng];
+        }
       }
     }
     return [3.1390, 101.6869]; // Default: KL center
@@ -103,33 +109,44 @@ export default function Map() {
       ))}
 
       {/* Incident Markers */}
-      {incidents.filter(incident => incident.location).map((incident) => (
-        <Marker
-          key={`incident-${incident.id}`}
-          position={[incident.location.lat, incident.location.lng]}
-          icon={getIncidentIcon(getIncidentSeverity(incident), mapIncidentStatus(incident.status))}
-        >
-          <Popup>
-            <div className="font-bold text-gray-800">{incident.triage}</div>
-            <div className="text-sm text-gray-600">
-              {incident.location.lat.toFixed(4)}, {incident.location.lng.toFixed(4)}
-            </div>
-            {incident.description && (
-              <div className="text-xs text-gray-500 mt-1">{incident.description}</div>
-            )}
-            <div className={`text-xs mt-1 font-semibold ${incident.status === 'PENDING' ? 'text-red-600' :
-                incident.status === 'COMPLETED' ? 'text-green-600' : 'text-yellow-600'
-              }`}>
-              Status: {incident.status}
-            </div>
-            {incident.assignedAmbulanceId && (
-              <div className="text-xs text-blue-600 mt-1">
-                Assigned: Ambulance #{incident.assignedAmbulanceId}
-              </div>
-            )}
-          </Popup>
-        </Marker>
-      ))}
+      {incidents
+        .filter(incident => {
+          const lat = incident.location?.lat ?? incident.lat;
+          const lng = incident.location?.lng ?? incident.lng;
+          return lat !== undefined && lng !== undefined;
+        })
+        .map((incident) => {
+          const lat = incident.location?.lat ?? incident.lat!;
+          const lng = incident.location?.lng ?? incident.lng!;
+
+          return (
+            <Marker
+              key={`incident-${incident.id}`}
+              position={[lat, lng]}
+              icon={getIncidentIcon(getIncidentSeverity(incident), mapIncidentStatus(incident.status))}
+            >
+              <Popup>
+                <div className="font-bold text-gray-800">{incident.triage}</div>
+                <div className="text-sm text-gray-600">
+                  {lat.toFixed(4)}, {lng.toFixed(4)}
+                </div>
+                {incident.description && (
+                  <div className="text-xs text-gray-500 mt-1">{incident.description}</div>
+                )}
+                <div className={`text-xs mt-1 font-semibold ${incident.status === 'PENDING' ? 'text-red-600' :
+                    incident.status === 'COMPLETED' ? 'text-green-600' : 'text-yellow-600'
+                  }`}>
+                  Status: {incident.status}
+                </div>
+                {incident.assignedAmbulanceId && (
+                  <div className="text-xs text-blue-600 mt-1">
+                    Assigned: Ambulance #{incident.assignedAmbulanceId}
+                  </div>
+                )}
+              </Popup>
+            </Marker>
+          );
+        })}
 
       {/* Ambulance Markers with Smooth Movement */}
       {ambulances.map((ambulance) => {
@@ -150,8 +167,8 @@ export default function Map() {
                 </div>
               )}
               <div className={`text-sm font-semibold mt-1 ${ambulance.status === 'IDLE' ? 'text-green-600' :
-                  ambulance.status === 'EN_ROUTE' ? 'text-purple-600' :
-                    ambulance.status === 'ON_SCENE' ? 'text-orange-600' : 'text-gray-600'
+                ambulance.status === 'EN_ROUTE' ? 'text-purple-600' :
+                  ambulance.status === 'ON_SCENE' ? 'text-orange-600' : 'text-gray-600'
                 }`}>
                 {ambulance.status.replace('_', ' ')}
               </div>
