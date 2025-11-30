@@ -1,12 +1,12 @@
 import { useMemo } from 'react';
-import type { Incident } from '../mockData/types';
-import { StatusTag } from './statusTag';
+import type { UIIncident } from './incidentsPanel';
+import { StatusTag } from './StatusTag';
 
 interface IncidentCardProps {
-  incident: Incident;
-  onAssignClick: (incident: Incident) => void;
-  onComplete: (id: number) => void;
-  onCancelClick: (incident: Incident) => void;
+  incident: UIIncident;
+  onAssignClick: (incident: UIIncident) => void;
+  onComplete: (id: string) => void;
+  onCancelClick: (incident: UIIncident) => void;
 }
 
 export function IncidentCard({ incident, onAssignClick, onComplete, onCancelClick }: IncidentCardProps) {

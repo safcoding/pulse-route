@@ -126,7 +126,7 @@ const config = {
       "value": "prisma-client-js"
     },
     "output": {
-      "value": "/Users/christineshaneong/sdgutar/pulse-route/generated/prisma",
+      "value": "/Users/rith/dev/mySafeRoute/frontend/pulse-route/generated/prisma",
       "fromEnvVar": null
     },
     "config": {
@@ -140,11 +140,12 @@ const config = {
       }
     ],
     "previewFeatures": [],
-    "sourceFilePath": "/Users/christineshaneong/sdgutar/pulse-route/prisma/schema.prisma",
+    "sourceFilePath": "/Users/rith/dev/mySafeRoute/frontend/pulse-route/prisma/schema.prisma",
     "isCustomOutput": true
   },
   "relativeEnvPaths": {
-    "rootEnvPath": null
+    "rootEnvPath": null,
+    "schemaEnvPath": "../../.env"
   },
   "relativePath": "../../prisma",
   "clientVersion": "6.19.0",

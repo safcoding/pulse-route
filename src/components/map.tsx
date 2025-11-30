@@ -39,7 +39,7 @@ const routePath: [number, number][] = [
   [3.0580, 101.5900]  // End
 ];
 
-export default function Map() { 
+export default function Map() {
   const [currentStep, setCurrentStep] = useState(0);
 
   // Animation Logic
@@ -47,7 +47,7 @@ export default function Map() {
     const interval = setInterval(() => {
       setCurrentStep((prev) => {
         // If we reached the end, restart (or stop)
-        if (prev >= routePath.length - 1) return 0; 
+        if (prev >= routePath.length - 1) return 0;
         return prev + 1;
       });
     }, 1000); // Move every 1 second
@@ -56,13 +56,13 @@ export default function Map() {
   }, []);
 
   // Calculate current position based on step
-  const driverPosition = routePath[currentStep];
+  const driverPosition: [number, number] = routePath[currentStep] ?? routePath[0]!;
 
-  return(
-    <MapContainer 
+  return (
+    <MapContainer
       center={[3.0565, 101.5875]} // Center between the two points
-      zoom={16} 
-      scrollWheelZoom={false}   
+      zoom={16}
+      scrollWheelZoom={false}
       style={{ height: "100%", width: "100%" }}
     >
       <TileLayer

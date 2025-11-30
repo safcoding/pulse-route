@@ -1,12 +1,12 @@
-import type { IncidentStatus } from "../mockData/types";
+type UIIncidentStatus = 'Pending' | 'Ongoing' | 'Completed' | 'Cancelled';
 
 interface StatusTagProps {
-  status: IncidentStatus;
+  status: UIIncidentStatus;
 }
 
 export function StatusTag({ status }: StatusTagProps) {
   let color = '';
-  
+
   switch (status) {
     case 'Pending': color = 'bg-red-100 text-red-700'; break;
     case 'Ongoing': color = 'bg-yellow-100 text-yellow-700'; break;
