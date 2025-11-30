@@ -43,6 +43,10 @@ export interface UIIncident {
 }
 
 function transformIncidentForUI(incident: Incident): UIIncident {
+  // Handle both location object and separate lat/lng fields from backend
+  const lat = incident.location?.lat ?? incident.lat;
+  const lng = incident.location?.lng ?? incident.lng;
+
   return {
     id: incident.id,
     type: incident.triage,
@@ -50,8 +54,8 @@ function transformIncidentForUI(incident: Incident): UIIncident {
     time: incident.createdAt
       ? new Date(incident.createdAt).toLocaleString()
       : 'Unknown',
-    location: incident.location
-      ? `${incident.location.lat.toFixed(4)}, ${incident.location.lng.toFixed(4)}`
+    location: (lat !== undefined && lng !== undefined)
+      ? `${lat.toFixed(4)}, ${lng.toFixed(4)}`
       : 'Unknown location',
     caller: 'Dispatcher',
     responder: incident.assignedAmbulanceId

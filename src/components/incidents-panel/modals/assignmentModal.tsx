@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { UIIncident } from '../incidentsPanel';
-import { useHospitals, useIncidentCandidates, useAssignAmbulance } from '~/api/hooks';
-import type { Hospital } from '~/api/types';
+import { useIncidentCandidates, useAssignAmbulance } from '~/api/hooks';
+import type { AmbulanceType } from '~/api/types';
 
 interface AssignmentModalProps {
     incident: UIIncident | null;
@@ -9,17 +9,20 @@ interface AssignmentModalProps {
     onClose: () => void;
 }
 
+const AMBULANCE_TYPES: { value: AmbulanceType; label: string; description: string }[] = [
+    { value: 'BLS', label: 'Basic Life Support (BLS)', description: 'Standard emergency medical care' },
+    { value: 'ALS', label: 'Advanced Life Support (ALS)', description: 'Advanced interventions and medications' },
+    { value: 'CCT', label: 'Critical Care Transport (CCT)', description: 'Intensive care during transport' },
+    { value: 'RRV', label: 'Rapid Response Vehicle (RRV)', description: 'Fast response, no transport capability' },
+];
+
 export function AssignmentModal({ incident, onAssign, onClose }: AssignmentModalProps) {
     const [step, setStep] = useState(1);
-    const [selectedHospital, setSelectedHospital] = useState<number | null>(null);
+    const [selectedType, setSelectedType] = useState<AmbulanceType | null>(null);
     const [selectedAmbulanceId, setSelectedAmbulanceId] = useState<number | null>(null);
     const [notes, setNotes] = useState('');
 
-    const { data: hospitals = [], isLoading: hospitalsLoading } = useHospitals({
-        enabled: !!incident,
-    });
-
-    // Fetch ambulance candidates from the backend
+    // Fetch ambulance candidates from the backend when on step 2
     const { data: candidates = [], isLoading: candidatesLoading } = useIncidentCandidates(
         incident?.id ?? '',
         {
@@ -28,17 +31,18 @@ export function AssignmentModal({ incident, onAssign, onClose }: AssignmentModal
     );
 
     const assignAmbulance = useAssignAmbulance({
-        onSuccess: () => {
+        onSuccess: (data) => {
+            // Log success for debugging
+            console.log('Unit assigned successfully:', data);
             handleReset();
             onClose();
+            // The WebSocket will handle updating the map and list automatically
         },
     });
 
-    const loading = hospitalsLoading;
-
     const handleReset = () => {
         setStep(1);
-        setSelectedHospital(null);
+        setSelectedType(null);
         setSelectedAmbulanceId(null);
         setNotes('');
     };
@@ -46,7 +50,7 @@ export function AssignmentModal({ incident, onAssign, onClose }: AssignmentModal
     if (!incident) return null;
 
     const handleProceedToStep2 = () => {
-        if (selectedHospital !== null) {
+        if (selectedType !== null) {
             setStep(2);
         }
     };
@@ -69,49 +73,34 @@ export function AssignmentModal({ incident, onAssign, onClose }: AssignmentModal
         }
     };
 
-    // Calculate distance (placeholder - implement with actual route calculation)
-    const calculateDistance = (_hospital: Hospital) => {
-        return `${(Math.random() * 5 + 1).toFixed(1)} km`;
-    };
+    // Filter candidates by selected type
+    const filteredCandidates = selectedType 
+        ? candidates.filter(c => c.type === selectedType)
+        : candidates;
 
     const renderStep1 = () => (
         <>
-            <h3 className="text-2xl font-bold text-gray-900 mb-2">Select Hospital</h3>
+            <h3 className="text-2xl font-bold text-gray-900 mb-2">Select Unit Type</h3>
             <p className="text-gray-600 mb-4">Incident #{incident.id} - {incident.type}</p>
 
-            {loading ? (
-                <div className="text-center py-8 text-gray-500">Loading hospitals...</div>
-            ) : (
-                <div className="space-y-3 mb-6 max-h-96 overflow-y-auto">
-                    {hospitals.map((hospital: Hospital) => (
-                        <div
-                            key={hospital.id}
-                            onClick={() => setSelectedHospital(hospital.id)}
-                            className={`cursor-pointer border rounded-lg p-4 transition ${selectedHospital === hospital.id
-                                ? 'border-blue-500 bg-blue-50'
-                                : 'border-gray-200 hover:border-blue-300'
-                                }`}
-                        >
-                            <div className="flex justify-between items-start mb-2">
-                                <h4 className="font-bold text-gray-900">{hospital.name}</h4>
-                                <span className="text-sm text-gray-500">{calculateDistance(hospital)}</span>
-                            </div>
-                            <div className="text-sm text-gray-600">
-                                <div className="mb-1">
-                                    <span className="font-semibold">Ambulances:</span> {hospital.ambulanceCount} available
-                                </div>
-                                <div className="flex flex-wrap gap-1">
-                                    {hospital.capabilities.map((cap, idx) => (
-                                        <span key={idx} className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">
-                                            {cap}
-                                        </span>
-                                    ))}
-                                </div>
-                            </div>
+            <div className="space-y-3 mb-6 max-h-96 overflow-y-auto">
+                {AMBULANCE_TYPES.map((type) => (
+                    <div
+                        key={type.value}
+                        onClick={() => setSelectedType(type.value)}
+                        className={`cursor-pointer border rounded-lg p-4 transition ${selectedType === type.value
+                            ? 'border-blue-500 bg-blue-50'
+                            : 'border-gray-200 hover:border-blue-300'
+                            }`}
+                    >
+                        <div className="flex justify-between items-start mb-1">
+                            <h4 className="font-bold text-gray-900">{type.label}</h4>
+                            <span className="text-xs bg-gray-200 px-2 py-0.5 rounded">{type.value}</span>
                         </div>
-                    ))}
-                </div>
-            )}
+                        <p className="text-sm text-gray-600">{type.description}</p>
+                    </div>
+                ))}
+            </div>
 
             <div className="flex justify-end space-x-3">
                 <button onClick={onClose} className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-medium transition">
@@ -119,10 +108,10 @@ export function AssignmentModal({ incident, onAssign, onClose }: AssignmentModal
                 </button>
                 <button
                     onClick={handleProceedToStep2}
-                    disabled={selectedHospital === null}
+                    disabled={selectedType === null}
                     className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg font-medium transition"
                 >
-                    Next: Select Unit
+                    Next: Select Responder
                 </button>
             </div>
         </>
@@ -134,25 +123,27 @@ export function AssignmentModal({ incident, onAssign, onClose }: AssignmentModal
                 onClick={() => setStep(1)}
                 className="mb-4 text-blue-600 hover:underline text-sm font-medium"
             >
-                ← Back to Hospital Selection
+                ← Back to Unit Type Selection
             </button>
 
-            <h3 className="text-2xl font-bold text-gray-900 mb-2">Assign Unit</h3>
+            <h3 className="text-2xl font-bold text-gray-900 mb-2">Select Responder</h3>
             <p className="text-gray-600 mb-4">
-                Hospital: {hospitals.find((h: Hospital) => h.id === selectedHospital)?.name}
+                Unit Type: <span className="font-semibold">{selectedType}</span>
             </p>
 
             <div className="mb-4">
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Available Ambulances</label>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Available {selectedType} Units (sorted by ETA)
+                </label>
                 {candidatesLoading ? (
                     <div className="text-center py-4 text-gray-500">Loading ambulances...</div>
-                ) : candidates.length === 0 ? (
+                ) : filteredCandidates.length === 0 ? (
                     <div className="text-center py-4 text-gray-500 border border-gray-200 rounded-lg">
-                        No ambulances available for this incident
+                        No {selectedType} ambulances available for this incident
                     </div>
                 ) : (
                     <div className="space-y-2 max-h-64 overflow-y-auto">
-                        {candidates.map((candidate) => (
+                        {filteredCandidates.map((candidate) => (
                             <div
                                 key={candidate.id}
                                 onClick={() => setSelectedAmbulanceId(candidate.id)}
