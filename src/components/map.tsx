@@ -1,6 +1,6 @@
 'use client'
-import { useMemo } from "react";
-import { MapContainer, TileLayer, Popup, Marker } from "react-leaflet";
+import { useMemo, useState } from "react";
+import { MapContainer, TileLayer, Popup, Marker, Polyline } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import {
   getIncidentIcon,
@@ -10,7 +10,7 @@ import {
   type IncidentStatus,
   type ResponderStatus
 } from "./ui/mapIcons";
-import { useHospitals, useAmbulances, useActiveIncidents, useAmbulanceMovement } from "~/api/hooks";
+import { useHospitals, useAmbulances, useActiveIncidents, useAmbulanceMovement, useAmbulanceRoutes } from "~/api/hooks";
 import type { Ambulance, Incident, AmbulanceStatus, IncidentStatus as ApiIncidentStatus } from "~/api/types";
 
 // Map API statuses to UI types
@@ -51,6 +51,12 @@ export default function Map() {
 
   // Use ambulance movement hook for smooth transitions
   const ambulancePositions = useAmbulanceMovement(ambulances);
+  
+  // Get real-time route data from WebSocket
+  const ambulanceRoutes = useAmbulanceRoutes();
+
+  // Track which ambulance popup is open to highlight its route
+  const [focusedAmbulanceId, setFocusedAmbulanceId] = useState<number | null>(null);
 
   // Calculate center of map based on incidents or default to Kuala Lumpur
   const mapCenter: [number, number] = useMemo(() => {
@@ -151,12 +157,17 @@ export default function Map() {
       {/* Ambulance Markers with Smooth Movement */}
       {ambulances.map((ambulance) => {
         const position = ambulancePositions.get(ambulance.id) ?? ambulance.location;
+        const routeData = ambulanceRoutes.get(ambulance.id);
 
         return (
           <Marker
             key={`ambulance-${ambulance.id}`}
             position={[position.lat, position.lng]}
             icon={getAmbulanceIcon(mapAmbulanceStatus(ambulance.status))}
+            eventHandlers={{
+              popupopen: () => setFocusedAmbulanceId(ambulance.id),
+              popupclose: () => setFocusedAmbulanceId(null),
+            }}
           >
             <Popup>
               <div className="font-bold text-indigo-700">{ambulance.callsign}</div>
@@ -172,8 +183,59 @@ export default function Map() {
                 }`}>
                 {ambulance.status.replace('_', ' ')}
               </div>
+              {routeData && routeData.etaSeconds > 0 && (
+                <div className="text-xs text-blue-600 mt-1 font-semibold">
+                  ETA: {Math.ceil(routeData.etaSeconds / 60)} min
+                </div>
+              )}
+              {routeData?.phase && (
+                <div className="text-xs text-gray-500 mt-1">
+                  Phase: {routeData.phase.replace('_', ' ')}
+                </div>
+              )}
+              {routeData && (
+                <div className="text-xs text-purple-600 mt-2 italic">
+                  ✨ Route highlighted on map
+                </div>
+              )}
             </Popup>
           </Marker>
+        );
+      })}
+
+      {/* Ambulance Routes (Polylines) - Only show for focused ambulance or all if none focused */}
+      {Array.from(ambulanceRoutes.entries()).map(([ambulanceId, routeData]) => {
+        if (!routeData.route || !routeData.route.coordinates || routeData.route.coordinates.length === 0) {
+          return null;
+        }
+
+        // Only show route if this ambulance is focused (popup open)
+        const isFocused = focusedAmbulanceId === ambulanceId;
+        const shouldShow = isFocused || focusedAmbulanceId === null;
+        
+        if (!shouldShow) return null;
+
+        // Convert GeoJSON coordinates [lng, lat] to Leaflet format [lat, lng]
+        const positions: [number, number][] = routeData.route.coordinates.map(
+          ([lng, lat]) => [lat, lng]
+        );
+
+        // Color based on phase
+        const baseColor = routeData.phase === 'TO_SCENE' ? '#8B5CF6' : // Purple for to scene
+                          routeData.phase === 'TO_HOSPITAL' ? '#EF4444' : // Red for to hospital
+                          '#3B82F6'; // Blue for returning
+
+        return (
+          <Polyline
+            key={`route-${ambulanceId}`}
+            positions={positions}
+            pathOptions={{
+              color: baseColor,
+              weight: isFocused ? 6 : 4,
+              opacity: isFocused ? 0.95 : 0.5,
+              dashArray: isFocused ? undefined : '10, 10',
+            }}
+          />
         );
       })}
 

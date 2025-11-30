@@ -8,3 +8,4 @@ export * from './useRouting';
 export * from './useSimulation';
 export * from './useSocket';
 export * from './useAmbulanceMovement';
+export * from './useAmbulanceRoutes';

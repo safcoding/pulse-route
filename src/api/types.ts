@@ -322,12 +322,18 @@ export interface AmbulanceUpdateEvent {
   lng: number;
   status: AmbulanceStatus;
   phase?: 'TO_SCENE' | 'TO_HOSPITAL' | 'RETURNING';
+  route?: GeoJsonLineString;
+  etaSeconds?: number;
 }
 
 export interface HospitalSelectedEvent {
   incidentId: string;
   hospitalId: number;
   hospitalName: string;
+  hospital?: {
+    id: number;
+    name: string;
+  };
 }
 
 export interface SimulationCompleteEvent {

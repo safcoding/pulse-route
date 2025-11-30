@@ -280,11 +280,45 @@ interface AmbulanceUpdateEvent {
   lng: number;
   status: AmbulanceStatus;
   phase?: 'TO_SCENE' | 'TO_HOSPITAL' | 'RETURNING';
+  route?: GeoJsonLineString; // NEW: Full route polyline
+  etaSeconds?: number; // NEW: Estimated time to destination
+}
+
+interface GeoJsonLineString {
+  type: 'LineString';
+  coordinates: [number, number][]; // [lng, lat] format
 }
 ```
 
 **When:** During active simulation  
-**Action:** Update ambulance marker position on map
+**Action:** 
+- Update ambulance marker position on map
+- Draw route polyline from current position to destination
+- Display ETA countdown in UI
+
+**Example:**
+```typescript
+{
+  "type": "AMBULANCE_UPDATE",
+  "data": {
+    "id": 101,
+    "ambulanceId": 101,
+    "lat": 3.0733,
+    "lng": 101.6067,
+    "status": "EN_ROUTE",
+    "phase": "TO_SCENE",
+    "route": {
+      "type": "LineString",
+      "coordinates": [
+        [101.6067, 3.0733],
+        [101.6100, 3.0750],
+        [101.6150, 3.0780]
+      ]
+    },
+    "etaSeconds": 240
+  }
+}
+```
 
 ---
 
@@ -306,7 +340,28 @@ interface IncidentUpdateEvent {
 
 ---
 
-#### 4. INCIDENT_DELETED
+#### 4. HOSPITAL_SELECTED
+Fired when ambulance leaves the scene and destination hospital is selected.
+
+**TypeScript Type:**
+```typescript
+interface HospitalSelectedEvent {
+  incidentId: string;
+  hospitalId: number;
+  hospitalName: string;
+  hospital?: {
+    id: number;
+    name: string;
+  };
+}
+```
+
+**When:** After ambulance picks up patient  
+**Action:** Update UI to show destination hospital
+
+---
+
+#### 5. INCIDENT_DELETED
 Fired when incident is deleted.
 
 **TypeScript Type:**
@@ -320,7 +375,7 @@ interface IncidentDeletedEvent {
 
 ---
 
-#### 5. SIMULATION_COMPLETE
+#### 6. SIMULATION_COMPLETE
 Fired when ambulance reaches destination.
 
 **TypeScript Type:**

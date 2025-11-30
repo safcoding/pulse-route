@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { env } from '~/env';
 import type {
@@ -7,13 +7,44 @@ import type {
   IncidentAddedEvent,
   IncidentUpdateEvent,
   IncidentDeletedEvent,
+  HospitalSelectedEvent,
   Ambulance,
   Incident,
+  GeoJsonLineString,
 } from '../types';
 import { ambulanceKeys } from './useAmbulances';
 import { incidentKeys } from './useIncidents';
 
 const WS_URL = env.NEXT_PUBLIC_API_URL.replace('http', 'ws') + '/ws/dispatch';
+
+// Store for ambulance routes and ETAs (shared across components)
+export interface AmbulanceRouteData {
+  route: GeoJsonLineString;
+  etaSeconds: number;
+  phase?: 'TO_SCENE' | 'TO_HOSPITAL' | 'RETURNING';
+}
+
+const ambulanceRoutesStore = new Map<number, AmbulanceRouteData>();
+const routeUpdateListeners = new Set<() => void>();
+
+export function getAmbulanceRoute(ambulanceId: number): AmbulanceRouteData | undefined {
+  return ambulanceRoutesStore.get(ambulanceId);
+}
+
+export function getAllAmbulanceRoutes(): Map<number, AmbulanceRouteData> {
+  return new Map(ambulanceRoutesStore);
+}
+
+export function subscribeToRouteUpdates(callback: () => void): () => void {
+  routeUpdateListeners.add(callback);
+  return () => {
+    routeUpdateListeners.delete(callback);
+  };
+}
+
+function notifyRouteUpdate() {
+  routeUpdateListeners.forEach(listener => listener());
+}
 
 /**
  * Hook to manage WebSocket connection to the dispatch server
@@ -25,6 +56,7 @@ export function useDispatchSocket() {
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const reconnectAttemptsRef = useRef(0);
   const maxReconnectAttempts = 10;
+  const [isConnected, setIsConnected] = useState(false);
 
   const handleAmbulanceUpdate = useCallback(
     (data: AmbulanceUpdateEvent | undefined) => {
@@ -37,6 +69,18 @@ export function useDispatchSocket() {
       if (!ambulanceId) {
         console.warn('AMBULANCE_UPDATE missing ambulanceId:', data);
         return;
+      }
+
+      // Store route and ETA data if present
+      if (data.route || data.etaSeconds !== undefined) {
+        if (data.route) {
+          ambulanceRoutesStore.set(ambulanceId, {
+            route: data.route,
+            etaSeconds: data.etaSeconds ?? 0,
+            phase: data.phase,
+          });
+          notifyRouteUpdate();
+        }
       }
 
       // Update specific ambulance in cache
@@ -150,6 +194,18 @@ export function useDispatchSocket() {
     [queryClient]
   );
 
+  const handleHospitalSelected = useCallback(
+    (data: HospitalSelectedEvent | undefined) => {
+      if (!data) {
+        console.warn('Received HOSPITAL_SELECTED with no data');
+        return;
+      }
+      console.log('Hospital selected:', data.hospital?.name ?? data.hospitalName, 'for incident', data.incidentId);
+      // Could store this for visualization later
+    },
+    []
+  );
+
   const handleMessage = useCallback(
     (event: MessageEvent) => {
       try {
@@ -174,6 +230,8 @@ export function useDispatchSocket() {
             handleIncidentDeleted(message.data as IncidentDeletedEvent | undefined);
             break;
           case 'HOSPITAL_SELECTED':
+            handleHospitalSelected(message.data as HospitalSelectedEvent | undefined);
+            break;
           case 'SIMULATION_COMPLETE':
           case 'SIMULATION_CANCELLED':
             // Log for debugging but don't handle yet
@@ -186,7 +244,7 @@ export function useDispatchSocket() {
         console.error('Failed to parse WebSocket message:', error);
       }
     },
-    [handleAmbulanceUpdate, handleIncidentAdded, handleIncidentUpdate, handleIncidentDeleted]
+    [handleAmbulanceUpdate, handleIncidentAdded, handleIncidentUpdate, handleIncidentDeleted, handleHospitalSelected]
   );
 
   const connect = useCallback(() => {
@@ -195,6 +253,7 @@ export function useDispatchSocket() {
 
       ws.current.onopen = () => {
         console.log('WebSocket connected');
+        setIsConnected(true);
         reconnectAttemptsRef.current = 0;
       };
 
@@ -206,6 +265,7 @@ export function useDispatchSocket() {
 
       ws.current.onclose = () => {
         console.log('WebSocket disconnected');
+        setIsConnected(false);
 
         // Attempt reconnection with exponential backoff
         if (reconnectAttemptsRef.current < maxReconnectAttempts) {
@@ -239,6 +299,6 @@ export function useDispatchSocket() {
   }, [connect]);
 
   return {
-    isConnected: ws.current?.readyState === WebSocket.OPEN,
+    isConnected,
   };
 }

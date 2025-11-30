@@ -15,6 +15,7 @@ function mapApiStatusToUI(status: ApiIncidentStatus): UIIncidentStatus {
     case 'PENDING':
       return 'Pending';
     case 'ASSIGNED':
+    case 'DISPATCHED':
     case 'EN_ROUTE':
     case 'ARRIVED':
     case 'TRANSPORTING':
