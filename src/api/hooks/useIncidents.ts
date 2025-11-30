@@ -9,9 +9,11 @@ import {
   getIncidents,
   getActiveIncidents,
   getIncidentById,
+  getIncidentCandidates,
   createIncident,
   assignAmbulanceToIncident,
   updateIncidentStatus,
+  deleteIncident,
 } from '../services/incidents';
 import type {
   Incident,
@@ -20,6 +22,7 @@ import type {
   AssignAmbulanceRequest,
   AssignAmbulanceResponse,
   UpdateIncidentStatusRequest,
+  AmbulanceCandidate,
 } from '../types';
 import { ambulanceKeys } from './useAmbulances';
 
@@ -27,21 +30,24 @@ import { ambulanceKeys } from './useAmbulances';
 export const incidentKeys = {
   all: ['incidents'] as const,
   lists: () => [...incidentKeys.all, 'list'] as const,
-  list: () => [...incidentKeys.lists()] as const,
+  list: (status?: string) => [...incidentKeys.lists(), { status }] as const,
   active: () => [...incidentKeys.lists(), 'active'] as const,
   details: () => [...incidentKeys.all, 'detail'] as const,
   detail: (id: string) => [...incidentKeys.details(), id] as const,
+  candidates: (id: string) => [...incidentKeys.detail(id), 'candidates'] as const,
 };
 
 /**
  * Hook to fetch all incidents
+ * Optional status filter (e.g., 'PENDING')
  */
 export function useIncidents(
+  status?: string,
   options?: Omit<UseQueryOptions<Incident[], Error>, 'queryKey' | 'queryFn'>
 ) {
   return useQuery({
-    queryKey: incidentKeys.list(),
-    queryFn: getIncidents,
+    queryKey: incidentKeys.list(status),
+    queryFn: () => getIncidents(status),
     ...options,
   });
 }
@@ -70,6 +76,22 @@ export function useIncident(
     queryKey: incidentKeys.detail(id),
     queryFn: () => getIncidentById(id),
     enabled: !!id,
+    ...options,
+  });
+}
+
+/**
+ * Hook to fetch ambulance candidates for an incident
+ * Returns ranked list of best ambulances based on ETA and capability
+ */
+export function useIncidentCandidates(
+  incidentId: string,
+  options?: Omit<UseQueryOptions<AmbulanceCandidate[], Error>, 'queryKey' | 'queryFn'>
+) {
+  return useQuery({
+    queryKey: incidentKeys.candidates(incidentId),
+    queryFn: () => getIncidentCandidates(incidentId),
+    enabled: !!incidentId,
     ...options,
   });
 }
@@ -139,6 +161,24 @@ export function useUpdateIncidentStatus(
     onSuccess: (data, variables) => {
       // Update the incident in cache
       queryClient.setQueryData(incidentKeys.detail(variables.id), data);
+      // Invalidate incident lists
+      void queryClient.invalidateQueries({ queryKey: incidentKeys.lists() });
+    },
+    ...options,
+  });
+}
+
+/**
+ * Hook to delete an incident
+ */
+export function useDeleteIncident(
+  options?: Omit<UseMutationOptions<void, Error, string>, 'mutationFn'>
+) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: deleteIncident,
+    onSuccess: () => {
       // Invalidate incident lists
       void queryClient.invalidateQueries({ queryKey: incidentKeys.lists() });
     },

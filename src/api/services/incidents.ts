@@ -1,4 +1,4 @@
-import { apiGet, apiPost, apiPatch } from '../client';
+import { apiGet, apiPost, apiPatch, apiDelete } from '../client';
 import type {
   ApiResponse,
   Incident,
@@ -7,13 +7,16 @@ import type {
   AssignAmbulanceRequest,
   AssignAmbulanceResponse,
   UpdateIncidentStatusRequest,
+  AmbulanceCandidate,
 } from '../types';
 
 /**
  * List all incidents (active, completed, cancelled)
+ * Optional query param: status (e.g., 'PENDING')
  */
-export async function getIncidents(): Promise<Incident[]> {
-  const response = await apiGet<ApiResponse<Incident[]>>('/incidents');
+export async function getIncidents(status?: string): Promise<Incident[]> {
+  const params = status ? { status } : undefined;
+  const response = await apiGet<ApiResponse<Incident[]>>('/incidents', { params });
   return response.data;
 }
 
@@ -34,6 +37,17 @@ export async function getIncidentById(id: string): Promise<Incident> {
 }
 
 /**
+ * Get ranked ambulance candidates for an incident
+ * Returns ambulances sorted by ETA and capability match
+ */
+export async function getIncidentCandidates(incidentId: string): Promise<AmbulanceCandidate[]> {
+  const response = await apiGet<ApiResponse<AmbulanceCandidate[]>>(
+    `/incidents/${incidentId}/candidates`
+  );
+  return response.data;
+}
+
+/**
  * Create a new incident. Automatically generates hospital recommendations.
  */
 export async function createIncident(
@@ -47,7 +61,8 @@ export async function createIncident(
 }
 
 /**
- * Manually assign an ambulance to an incident
+ * Assign an ambulance to an incident
+ * This immediately starts the movement simulation
  */
 export async function assignAmbulanceToIncident(
   incidentId: string,
@@ -72,4 +87,11 @@ export async function updateIncidentStatus(
     data
   );
   return response.data;
+}
+
+/**
+ * Delete an incident
+ */
+export async function deleteIncident(id: string): Promise<void> {
+  await apiDelete(`/incidents/${id}`);
 }

@@ -55,6 +55,7 @@ export interface Ambulance {
   type: AmbulanceType;
   status: AmbulanceStatus;
   location: Location;
+  capabilities?: string[];
   hospital?: {
     id: number;
     name: string;
@@ -78,18 +79,25 @@ export interface UpdateAmbulanceLocationRequest {
 export type TriageType = 'STEMI' | 'Stroke' | 'Trauma' | 'Burns' | 'Pediatric' | 'General';
 export type IncidentStatus = 
   | 'PENDING' 
-  | 'ASSIGNED' 
+  | 'ASSIGNED'
+  | 'DISPATCHED'
   | 'EN_ROUTE' 
   | 'ARRIVED' 
   | 'TRANSPORTING' 
   | 'COMPLETED' 
   | 'CANCELLED';
 
+export type IncidentCategory = 'MEDICAL' | 'FIRE' | 'ACCIDENT' | 'OTHER';
+
 export interface Incident {
   id: string;
   location: Location;
   triage: TriageType;
   status: IncidentStatus;
+  category?: IncidentCategory;
+  description?: string;
+  isAiGenerated?: boolean;
+  dispatcherNotes?: string;
   assignedAmbulanceId: number | null;
   recommendedHospitalId: string | null;
   etaSeconds: number | null;
@@ -115,12 +123,22 @@ export interface CreateIncidentResponse {
 }
 
 export interface AssignAmbulanceRequest {
-  ambulanceId: string;
+  ambulanceId: number;
+  dispatcherNotes?: string;
 }
 
 export interface AssignAmbulanceResponse {
   incident: Incident;
   ambulance: Ambulance;
+}
+
+export interface AmbulanceCandidate {
+  id: number;
+  callsign: string;
+  type: AmbulanceType;
+  etaSeconds: number;
+  distanceMeters: number;
+  hospitalName: string;
 }
 
 export interface UpdateIncidentStatusRequest {
@@ -215,6 +233,66 @@ export interface CalculateRouteResponse {
 }
 
 // ============================================
+// Simulation Types
+// ============================================
+
+export interface CreateScenarioRequest {
+  lat: number;
+  lng: number;
+  description: string;
+  callerName?: string;
+  callerPhone?: string;
+}
+
+export interface CreateScenarioResponse {
+  incident: Incident;
+  user: {
+    id: number;
+    name: string;
+    phone: string;
+  };
+  analysis: {
+    category: IncidentCategory;
+    severity: Severity;
+    triageType?: TriageType;
+    confidence: number;
+  };
+}
+
+export interface SeedIncidentsRequest {
+  count: number;
+  centerLat: number;
+  centerLng: number;
+  radiusKm: number;
+}
+
+export interface SeedIncidentsResponse {
+  created: number;
+  incidents: Incident[];
+}
+
+export interface AnalyzeTextRequest {
+  text: string;
+}
+
+export interface AnalyzeTextResponse {
+  category: IncidentCategory;
+  severity: Severity;
+  triageType?: TriageType;
+  confidence: number;
+  keywords: string[];
+}
+
+export interface SimulationStatus {
+  activeSimulations: number;
+  incidents: Array<{
+    incidentId: string;
+    ambulanceId: number;
+    startedAt: string;
+  }>;
+}
+
+// ============================================
 // WebSocket Event Types
 // ============================================
 
@@ -222,7 +300,10 @@ export type WebSocketEventType =
   | 'AMBULANCE_UPDATE'
   | 'HOSPITAL_SELECTED'
   | 'SIMULATION_COMPLETE'
-  | 'SIMULATION_CANCELLED';
+  | 'SIMULATION_CANCELLED'
+  | 'INCIDENT_ADDED'
+  | 'INCIDENT_UPDATE'
+  | 'INCIDENT_DELETED';
 
 export interface WebSocketMessage<T = unknown> {
   type: WebSocketEventType;
@@ -231,9 +312,13 @@ export interface WebSocketMessage<T = unknown> {
 }
 
 export interface AmbulanceUpdateEvent {
-  ambulanceId: number;
+  id: number;
+  ambulanceId?: number;
   location: Location;
+  lat: number;
+  lng: number;
   status: AmbulanceStatus;
+  phase?: 'TO_SCENE' | 'TO_HOSPITAL' | 'RETURNING';
 }
 
 export interface HospitalSelectedEvent {
@@ -251,4 +336,25 @@ export interface SimulationCompleteEvent {
 export interface SimulationCancelledEvent {
   incidentId: string;
   reason: string;
+}
+
+export interface IncidentAddedEvent {
+  incidentId: string;
+  lat: number;
+  lng: number;
+  category: IncidentCategory;
+  severity: Severity;
+  description?: string;
+  status: IncidentStatus;
+}
+
+export interface IncidentUpdateEvent {
+  incidentId: string;
+  status: IncidentStatus;
+  assignedAmbulanceId?: number | null;
+  dispatcherNotes?: string;
+}
+
+export interface IncidentDeletedEvent {
+  incidentId: string;
 }

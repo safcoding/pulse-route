@@ -5,3 +5,4 @@ export * from './incidents';
 export * from './dispatch';
 export * from './hazards';
 export * from './routing';
+export * from './simulation';
