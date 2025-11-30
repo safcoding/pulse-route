@@ -1,10 +1,17 @@
 'use client';
 import dynamic from 'next/dynamic';
-import { MapLegend } from '../components/ui/mapIcons';
-import IncidentsPanel from '../components/incidents-panel/incidentsPanel'; 
+import IncidentsPanel from '../components/incidents-panel/incidentsPanel';
+import { SimulationControlPanel } from '../components/SimulationControlPanel';
+import { useDispatchSocket } from '~/api/hooks';
+
+// Dynamic imports to prevent SSR issues with Leaflet
+const MapLegend = dynamic(
+  () => import('../components/ui/mapIcons').then((mod) => ({ default: mod.MapLegend })),
+  { ssr: false }
+);
 
 // Dynamic import for Map component (required for Leaflet SSR compatibility)
-const Map = dynamic(() => import('~/components/map'), { 
+const Map = dynamic(() => import('~/components/map'), {
   ssr: false,
   loading: () => (
     <div className="h-full w-full flex items-center justify-center bg-gray-100 rounded-xl">
@@ -16,13 +23,16 @@ const Map = dynamic(() => import('~/components/map'), {
 const IncidentTracker = IncidentsPanel;
 
 export default function DispatcherDashboardPage() {
+  // Initialize WebSocket connection for real-time updates
+  const { isConnected } = useDispatchSocket();
+
   return (
     // Tailwind classes for a full-height, split-screen layout
     <div className="flex h-screen overflow-hidden bg-gray-50">
-      
+
       {/* 1. Incidents Panel (Left Side - ~30% width) */}
       <div className="w-full md:w-1/3 border-r border-gray-200 overflow-y-auto">
-        <IncidentTracker /> 
+        <IncidentTracker />
       </div>
 
       {/* 2. Main Map / Responder View (Right Side - ~70% width) */}
@@ -30,23 +40,23 @@ export default function DispatcherDashboardPage() {
         <div className="flex items-center justify-between mb-4">
           <h1 className="text-2xl font-bold text-gray-800">Emergency Response Map</h1>
           <div className="flex items-center gap-2">
-            <span className="flex items-center gap-1 text-sm text-green-600">
-              <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-              Live
+            <span className={`flex items-center gap-1 text-sm ${isConnected ? 'text-green-600' : 'text-red-600'}`}>
+              <span className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></span>
+              {isConnected ? 'Live' : 'Disconnected'}
             </span>
           </div>
         </div>
-        
+
         {/* Map Container */}
         <div className="flex-1 bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden relative">
           <Map />
-          
+
           {/* Map Legend Overlay */}
           <div className="absolute bottom-4 left-4 z-1000">
             <MapLegend />
           </div>
         </div>
-        
+
         {/* Active Responders Summary */}
         <div className="mt-4 p-4 bg-white rounded-xl shadow-lg border border-gray-100">
           <h2 className="font-semibold text-gray-800 mb-3">Active Units Summary</h2>
@@ -70,6 +80,9 @@ export default function DispatcherDashboardPage() {
           </div>
         </div>
       </div>
+
+      {/* Simulation Control Panel (God Mode) */}
+      <SimulationControlPanel />
     </div>
   );
 }

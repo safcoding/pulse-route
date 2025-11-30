@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { UIIncident } from '../incidentsPanel';
-import { useHospitals, useAmbulances, useAssignAmbulance } from '~/api/hooks';
-import type { Hospital, Ambulance } from '~/api/types';
+import { useHospitals, useIncidentCandidates, useAssignAmbulance } from '~/api/hooks';
+import type { Hospital } from '~/api/types';
 
 interface AssignmentModalProps {
     incident: UIIncident | null;
@@ -12,16 +12,20 @@ interface AssignmentModalProps {
 export function AssignmentModal({ incident, onAssign, onClose }: AssignmentModalProps) {
     const [step, setStep] = useState(1);
     const [selectedHospital, setSelectedHospital] = useState<number | null>(null);
-    const [selectedUnit, setSelectedUnit] = useState<string>('');
+    const [selectedAmbulanceId, setSelectedAmbulanceId] = useState<number | null>(null);
     const [notes, setNotes] = useState('');
 
     const { data: hospitals = [], isLoading: hospitalsLoading } = useHospitals({
         enabled: !!incident,
     });
 
-    const { data: ambulances = [], isLoading: ambulancesLoading } = useAmbulances({
-        enabled: !!incident,
-    });
+    // Fetch ambulance candidates from the backend
+    const { data: candidates = [], isLoading: candidatesLoading } = useIncidentCandidates(
+        incident?.id ?? '',
+        {
+            enabled: !!incident && step === 2,
+        }
+    );
 
     const assignAmbulance = useAssignAmbulance({
         onSuccess: () => {
@@ -30,12 +34,12 @@ export function AssignmentModal({ incident, onAssign, onClose }: AssignmentModal
         },
     });
 
-    const loading = hospitalsLoading || ambulancesLoading;
+    const loading = hospitalsLoading;
 
     const handleReset = () => {
         setStep(1);
         setSelectedHospital(null);
-        setSelectedUnit('');
+        setSelectedAmbulanceId(null);
         setNotes('');
     };
 
@@ -48,17 +52,20 @@ export function AssignmentModal({ incident, onAssign, onClose }: AssignmentModal
     };
 
     const handleFinalAssign = () => {
-        if (selectedUnit && incident) {
-            const ambulance = ambulances.find(a => a.callsign === selectedUnit);
+        if (selectedAmbulanceId && incident) {
+            const candidate = candidates.find(c => c.id === selectedAmbulanceId);
 
             // Call the API to assign the ambulance
             assignAmbulance.mutate({
                 incidentId: incident.id,
-                data: { ambulanceId: String(ambulance?.id ?? selectedUnit) },
+                data: {
+                    ambulanceId: selectedAmbulanceId,
+                    dispatcherNotes: notes || undefined,
+                },
             });
 
             // Also call the parent callback
-            onAssign(incident.id, selectedUnit, ambulance?.type ?? 'BLS', notes);
+            onAssign(incident.id, candidate?.callsign ?? String(selectedAmbulanceId), candidate?.type ?? 'BLS', notes);
         }
     };
 
@@ -66,11 +73,6 @@ export function AssignmentModal({ incident, onAssign, onClose }: AssignmentModal
     const calculateDistance = (_hospital: Hospital) => {
         return `${(Math.random() * 5 + 1).toFixed(1)} km`;
     };
-
-    // Filter ambulances for selected hospital that are IDLE
-    const availableAmbulances = ambulances.filter(
-        (a: Ambulance) => a.hospitalId === selectedHospital && a.status === 'IDLE'
-    );
 
     const renderStep1 = () => (
         <>
@@ -86,8 +88,8 @@ export function AssignmentModal({ incident, onAssign, onClose }: AssignmentModal
                             key={hospital.id}
                             onClick={() => setSelectedHospital(hospital.id)}
                             className={`cursor-pointer border rounded-lg p-4 transition ${selectedHospital === hospital.id
-                                    ? 'border-blue-500 bg-blue-50'
-                                    : 'border-gray-200 hover:border-blue-300'
+                                ? 'border-blue-500 bg-blue-50'
+                                : 'border-gray-200 hover:border-blue-300'
                                 }`}
                         >
                             <div className="flex justify-between items-start mb-2">
@@ -142,31 +144,38 @@ export function AssignmentModal({ incident, onAssign, onClose }: AssignmentModal
 
             <div className="mb-4">
                 <label className="block text-sm font-semibold text-gray-700 mb-2">Available Ambulances</label>
-                {availableAmbulances.length === 0 ? (
+                {candidatesLoading ? (
+                    <div className="text-center py-4 text-gray-500">Loading ambulances...</div>
+                ) : candidates.length === 0 ? (
                     <div className="text-center py-4 text-gray-500 border border-gray-200 rounded-lg">
-                        No ambulances available at this hospital
+                        No ambulances available for this incident
                     </div>
                 ) : (
                     <div className="space-y-2 max-h-64 overflow-y-auto">
-                        {availableAmbulances.map((ambulance: Ambulance) => (
+                        {candidates.map((candidate) => (
                             <div
-                                key={ambulance.id}
-                                onClick={() => setSelectedUnit(ambulance.callsign)}
-                                className={`cursor-pointer border rounded-lg p-3 transition ${selectedUnit === ambulance.callsign
-                                        ? 'border-blue-500 bg-blue-50'
-                                        : 'border-gray-200 hover:border-blue-300'
+                                key={candidate.id}
+                                onClick={() => setSelectedAmbulanceId(candidate.id)}
+                                className={`cursor-pointer border rounded-lg p-3 transition ${selectedAmbulanceId === candidate.id
+                                    ? 'border-blue-500 bg-blue-50'
+                                    : 'border-gray-200 hover:border-blue-300'
                                     }`}
                             >
                                 <div className="flex justify-between items-center">
                                     <div>
-                                        <span className="font-bold text-gray-900">{ambulance.callsign}</span>
-                                        <span className="ml-2 text-xs bg-gray-200 px-2 py-0.5 rounded">{ambulance.type}</span>
-                                        <span className="ml-2 text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">
-                                            {ambulance.status}
+                                        <span className="font-bold text-gray-900">{candidate.callsign}</span>
+                                        <span className="ml-2 text-xs bg-gray-200 px-2 py-0.5 rounded">{candidate.type}</span>
+                                        <span className="ml-2 text-xs text-gray-600">
+                                            {candidate.hospitalName}
                                         </span>
                                     </div>
                                     <div className="text-right text-sm text-gray-600">
-                                        <div className="text-green-600 font-semibold">Ready to dispatch</div>
+                                        <div className="text-green-600 font-semibold">
+                                            ETA: {Math.ceil(candidate.etaSeconds / 60)} min
+                                        </div>
+                                        <div className="text-xs text-gray-500">
+                                            {(candidate.distanceMeters / 1000).toFixed(1)} km
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -192,7 +201,7 @@ export function AssignmentModal({ incident, onAssign, onClose }: AssignmentModal
                 </button>
                 <button
                     onClick={handleFinalAssign}
-                    disabled={!selectedUnit || assignAmbulance.isPending}
+                    disabled={!selectedAmbulanceId || assignAmbulance.isPending}
                     className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg font-medium transition"
                 >
                     {assignAmbulance.isPending ? 'Assigning...' : 'Confirm Assignment'}
