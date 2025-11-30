@@ -125,7 +125,7 @@ const config = {
       "value": "prisma-client-js"
     },
     "output": {
-      "value": "/Users/rith/dev/mySafeRoute/frontend/pulse-route/generated/prisma",
+      "value": "C:\\hackathon\\pulse-route\\pulse-route\\generated\\prisma",
       "fromEnvVar": null
     },
     "config": {
@@ -134,12 +134,12 @@ const config = {
     "binaryTargets": [
       {
         "fromEnvVar": null,
-        "value": "darwin-arm64",
+        "value": "windows",
         "native": true
       }
     ],
     "previewFeatures": [],
-    "sourceFilePath": "/Users/rith/dev/mySafeRoute/frontend/pulse-route/prisma/schema.prisma",
+    "sourceFilePath": "C:\\hackathon\\pulse-route\\pulse-route\\prisma\\schema.prisma",
     "isCustomOutput": true
   },
   "relativeEnvPaths": {
